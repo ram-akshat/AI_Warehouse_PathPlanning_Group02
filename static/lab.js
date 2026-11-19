@@ -303,7 +303,8 @@ function renderGrid() {
     const symbol = grid[row][column];
     Object.values(terrainClasses).forEach((className) => cell.classList.remove(className));
     cell.classList.add(terrainClasses[symbol]);
-    cell.querySelector("span").textContent = symbol === "~" ? "4" : "SG".includes(symbol) ? symbol : "";
+    const labels = { ".": "1", "~": "4", "#": "#", X: "×", S: "S", G: "G" };
+    cell.querySelector("span").textContent = labels[symbol];
     cell.setAttribute("aria-label", `${terrainNames[symbol]} at row ${row}, column ${column}`);
   });
 }
@@ -393,6 +394,15 @@ function drawPath(path = [], kind) {
     segment.style[vertical ? "height" : "width"] = `${100 / (vertical ? rows : columns)}%`;
     get("paths").append(segment);
   });
+  if (["current", "traveled"].includes(kind)) {
+    path.forEach(([row, column]) => {
+      const node = document.createElement("i");
+      node.className = `route-node ${kind}`;
+      node.style.left = `${((column + 0.5) / columns) * 100}%`;
+      node.style.top = `${((row + 0.5) / rows) * 100}%`;
+      get("paths").append(node);
+    });
+  }
 }
 
 function cellAt([row, column]) {
@@ -424,6 +434,10 @@ function render(animate = false) {
   }
   progress.value = frameIndex;
   progress.setAttribute("aria-valuetext", `Step ${frameIndex} of ${finish}`);
+  const demonstration = mode === "trolley"
+    ? "Trolley demonstration"
+    : `${data.algorithms.find((item) => item.id === selected).label} demonstration`;
+  get("plot-title").textContent = `${demonstration}: step ${frameIndex}/${finish}`;
   get("status").textContent = frame.message;
   get("step").disabled = frameIndex === finish;
 }

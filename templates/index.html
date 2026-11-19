@@ -37,16 +37,21 @@
             <div><span class="eyebrow map-kicker">SIMULATION GRID</span><h3>Warehouse floor plan</h3></div>
             <span class="map-tag">{{ grid|length }} ROWS × {{ grid[0]|length }} COLUMNS</span>
           </figcaption>
-          <div class="grid-frame">
-            <div class="col-labels" style="--cols: {{ grid[0]|length }}" aria-hidden="true">{% for c in range(grid[0]|length) %}<span>{{ c }}</span>{% endfor %}</div>
-            <div class="row-labels" style="--rows: {{ grid|length }}" aria-hidden="true">{% for r in range(grid|length) %}<span>{{ r }}</span>{% endfor %}</div>
-            <div id="floor" style="--cols: {{ grid[0]|length }}; --rows: {{ grid|length }}" aria-label="Editable {{ grid|length }} by {{ grid[0]|length }} warehouse grid" role="grid">
-              {% for row in grid %}{% set row_index = loop.index0 %}{% for cell in row %}
-              <button class="cell terrain-{{ {'#':'shelf', 'X':'restricted', '~':'crowd', 'S':'start', 'G':'goal', '.':'open'}[cell] }}" type="button" data-index="{{ row_index * (grid[0]|length) + loop.index0 }}" aria-label="{{ {'#':'Shelf', 'X':'Restricted zone', '~':'Crowded cell', 'S':'Packing station', 'G':'Dispatch station', '.':'Open aisle'}[cell] }}"><span>{{ cell if cell in 'SG' else '4' if cell == '~' else '' }}</span></button>
-              {% endfor %}{% endfor %}
-              <div class="overlay" id="paths"></div>
-              <div class="robot" id="robot" hidden></div>
+          <p class="plot-title" id="plot-title">A* demonstration: step 0/0</p>
+          <div class="plot-area">
+            <span class="row-axis-title" aria-hidden="true">Row</span>
+            <div class="grid-frame">
+              <div class="col-labels" style="--cols: {{ grid[0]|length }}" aria-hidden="true">{% for c in range(grid[0]|length) %}<span>{{ c }}</span>{% endfor %}</div>
+              <div class="row-labels" style="--rows: {{ grid|length }}" aria-hidden="true">{% for r in range(grid|length) %}<span>{{ r }}</span>{% endfor %}</div>
+              <div id="floor" style="--cols: {{ grid[0]|length }}; --rows: {{ grid|length }}" aria-label="Editable {{ grid|length }} by {{ grid[0]|length }} warehouse grid" role="grid">
+                {% for row in grid %}{% set row_index = loop.index0 %}{% for cell in row %}
+                <button class="cell terrain-{{ {'#':'shelf', 'X':'restricted', '~':'crowd', 'S':'start', 'G':'goal', '.':'open'}[cell] }}" type="button" data-index="{{ row_index * (grid[0]|length) + loop.index0 }}" aria-label="{{ {'#':'Shelf', 'X':'Restricted zone', '~':'Crowded cell', 'S':'Packing station', 'G':'Dispatch station', '.':'Open aisle'}[cell] }}"><span>{{ '1' if cell == '.' else '4' if cell == '~' else '#' if cell == '#' else '×' if cell == 'X' else cell }}</span></button>
+                {% endfor %}{% endfor %}
+                <div class="overlay" id="paths"></div>
+                <div class="robot" id="robot" hidden></div>
+              </div>
             </div>
+            <span class="column-axis-title" aria-hidden="true">Column</span>
           </div>
           <div class="map-editor" aria-labelledby="editor-title">
             <div class="editor-heading flex flex-wrap items-center justify-between gap-3">
