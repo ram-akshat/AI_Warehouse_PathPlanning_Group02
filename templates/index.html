@@ -20,7 +20,7 @@
     <section class="hero">
       <p class="eyebrow">ARTIFICIAL INTELLIGENCE / SEARCH ALGORITHMS</p>
       <h1>Warehouse Route Planning</h1>
-      <p>Trace how four search algorithms navigate a weighted warehouse grid, then see how A* responds to a blocked aisle.</p>
+      <p>Design a warehouse cell by cell, compare four search strategies, and watch A* adapt when an unexpected trolley blocks its plan.</p>
     </section>
 
     <section id="workspace" aria-labelledby="workspace-title">
@@ -35,18 +35,39 @@
         <figure class="panel map-card">
           <figcaption class="map-heading flex flex-wrap items-center justify-between gap-3">
             <div><span class="eyebrow map-kicker">SIMULATION GRID</span><h3>Warehouse floor plan</h3></div>
-            <span class="map-tag">8 ROWS × 12 COLUMNS</span>
+            <span class="map-tag">{{ grid|length }} ROWS × {{ grid[0]|length }} COLUMNS</span>
           </figcaption>
           <div class="grid-frame">
-            <div class="col-labels" aria-hidden="true">{% for c in range(12) %}<span>{{ c }}</span>{% endfor %}</div>
-            <div class="row-labels" aria-hidden="true">{% for r in range(8) %}<span>{{ r }}</span>{% endfor %}</div>
-            <div id="floor" aria-label="8 by 12 warehouse grid. Packing is at row 2, column 1. Dispatch is at row 2, column 10." role="img">
-              {% for row in grid %}{% for cell in row %}
-              <div class="cell terrain-{{ {'#':'shelf', 'X':'restricted', '~':'crowd', 'S':'start', 'G':'goal', '.':'open'}[cell] }}"><span>{{ cell if cell in 'SG' else '4' if cell == '~' else '' }}</span></div>
+            <div class="col-labels" style="--cols: {{ grid[0]|length }}" aria-hidden="true">{% for c in range(grid[0]|length) %}<span>{{ c }}</span>{% endfor %}</div>
+            <div class="row-labels" style="--rows: {{ grid|length }}" aria-hidden="true">{% for r in range(grid|length) %}<span>{{ r }}</span>{% endfor %}</div>
+            <div id="floor" style="--cols: {{ grid[0]|length }}; --rows: {{ grid|length }}" aria-label="Editable {{ grid|length }} by {{ grid[0]|length }} warehouse grid" role="grid">
+              {% for row in grid %}{% set row_index = loop.index0 %}{% for cell in row %}
+              <button class="cell terrain-{{ {'#':'shelf', 'X':'restricted', '~':'crowd', 'S':'start', 'G':'goal', '.':'open'}[cell] }}" type="button" data-index="{{ row_index * (grid[0]|length) + loop.index0 }}" aria-label="{{ {'#':'Shelf', 'X':'Restricted zone', '~':'Crowded cell', 'S':'Packing station', 'G':'Dispatch station', '.':'Open aisle'}[cell] }}"><span>{{ cell if cell in 'SG' else '4' if cell == '~' else '' }}</span></button>
               {% endfor %}{% endfor %}
               <div class="overlay" id="paths"></div>
               <div class="robot" id="robot" hidden></div>
             </div>
+          </div>
+          <div class="map-editor" aria-labelledby="editor-title">
+            <div class="editor-heading flex flex-wrap items-center justify-between gap-3">
+              <div><span class="eyebrow map-kicker">MAP EDITOR</span><h4 id="editor-title">Paint the warehouse</h4></div>
+              <div class="history-actions flex gap-2">
+                <button type="button" id="undo" class="map-action">Undo</button>
+                <button type="button" id="redo" class="map-action">Redo</button>
+                <button type="button" id="save-map" class="map-action">Save</button>
+                <button type="button" id="reset-map" class="map-action">Reset</button>
+                <button type="button" id="clear-map" class="map-action">Clear</button>
+              </div>
+            </div>
+            <div id="palette" class="palette flex flex-wrap gap-2" role="group" aria-label="Cell paint type">
+              <button type="button" data-paint="." aria-pressed="true"><i class="key terrain-open"></i>Open</button>
+              <button type="button" data-paint="~" aria-pressed="false"><i class="key terrain-crowd"></i>Crowded</button>
+              <button type="button" data-paint="#" aria-pressed="false"><i class="key terrain-shelf"></i>Shelf</button>
+              <button type="button" data-paint="X" aria-pressed="false"><i class="key terrain-restricted"></i>Restricted</button>
+              <button type="button" data-paint="S" aria-pressed="false"><i class="key key-start">S</i>Packing</button>
+              <button type="button" data-paint="G" aria-pressed="false"><i class="key key-goal">G</i>Dispatch</button>
+            </div>
+            <p id="editor-status" class="editor-status">Select a cell type, then click or drag across the grid. Routes update immediately.</p>
           </div>
           <ul class="legend flex flex-wrap gap-x-4 gap-y-2" aria-label="Grid legend">
             <li><i class="key terrain-open"></i> Open · 1</li>
@@ -72,8 +93,8 @@
           </div>
           <label id="scenario-label" for="scenario" hidden>Obstacle location</label>
           <select id="scenario" hidden>
-            <option value="detour">Lower aisle · detour available</option>
-            <option value="blocked">Dispatch approach · no alternative</option>
+            <option value="detour">Middle of the planned route</option>
+            <option value="blocked">Near the dispatch station</option>
           </select>
           <div class="selection">
             <h4 id="selection-title">A* Search</h4>
@@ -105,21 +126,21 @@
         <div class="table-wrap" tabindex="0" role="region" aria-label="Algorithm performance table">
           <table>
             <thead><tr><th scope="col">Algorithm</th><th scope="col">Goal reached</th><th scope="col">Moves</th><th scope="col">Path cost</th><th scope="col">Expanded</th><th scope="col">Time (ms)</th></tr></thead>
-            <tbody>
+            <tbody id="algorithm-results">
             {% for a in data.algorithms %}
               <tr{% if a.id == 'astar' %} class="best-row"{% endif %}><th scope="row">{{ a.name }}</th><td>{{ 'Yes' if a.reached else 'No' }}</td><td>{{ a.moves }}</td><td>{{ a.cost }}</td><td>{{ a.expanded }}</td><td>{{ '%.3f' | format(a.elapsed_ms) }}</td></tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
-        <p class="table-note"><strong>Fewer moves can cost more.</strong> BFS crosses five crowded cells in 9 moves for a cost of 24. A* takes 15 moves around them and lowers the cost to 15.</p>
+        <p class="table-note" id="comparison-note"><strong>Weighted costs matter.</strong> Edit the grid to test whether the route with the fewest moves also has the lowest travel cost.</p>
       </div>
       <h3 class="subheading">Trolley experiments</h3>
       <div class="panel results-panel">
         <div class="table-wrap" tabindex="0" role="region" aria-label="Trolley performance table">
           <table>
             <thead><tr><th scope="col">Obstacle location</th><th scope="col">Goal reached</th><th scope="col">Moves</th><th scope="col">Travel cost</th><th scope="col">Expanded</th><th scope="col">Time (ms)</th><th scope="col">Replans</th></tr></thead>
-            <tbody>
+            <tbody id="trolley-results">
             {% for id, row in data.scenarios.items() %}
               <tr><th scope="row">{{ 'Lower aisle' if id == 'detour' else 'Dispatch approach' }}</th><td>{{ 'Yes' if row.reached else 'No' }}</td><td>{{ row.moves }}</td><td>{{ row.cost }}</td><td>{{ row.expanded }}</td><td>{{ '%.3f' | format(row.elapsed_ms) }}</td><td>{{ row.replans }}</td></tr>
             {% endfor %}

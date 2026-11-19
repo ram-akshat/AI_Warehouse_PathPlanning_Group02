@@ -15,7 +15,7 @@ ALGORITHMS = (
     ("greedy", "Greedy", "Greedy Best-First Search", "Prioritizes the lowest Manhattan distance to dispatch.", greedy),
     ("astar", "A*", "A* Search", "Prioritizes total cost so far plus the Manhattan estimate.", astar),
 )
-SCENARIOS = (("detour", (5, 5)), ("blocked", (2, 9)))
+SCENARIOS = (("detour", (3, 9)), ("blocked", (1, 13)))
 
 
 @app.get("/")
@@ -38,5 +38,5 @@ def index():
             "trolley": trolley,
             **result.metrics(warehouse),
         }
-    data = {"algorithms": algorithms, "scenarios": scenarios}
+    data = {"grid": list(warehouse.grid), "algorithms": algorithms, "scenarios": scenarios}
     return render_template("index.html", grid=warehouse.grid, data=data)
