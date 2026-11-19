@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warehouse Route Planning Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='lab.css') }}">
+  <script type="module" src="{{ url_for('static', filename='lab.js') }}"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell flex items-center justify-between gap-4">
+      <a class="brand flex items-center gap-3" href="#"><span class="brand-icon" aria-hidden="true">▦</span> Warehouse Lab</a>
+      <nav aria-label="Page sections" class="flex items-center gap-5 sm:gap-8">
+        <a href="#workspace">Simulator</a><a href="#results">Results</a><a href="#method">Methods</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">ARTIFICIAL INTELLIGENCE / SEARCH ALGORITHMS</p>
+      <h1>Warehouse Route Planning</h1>
+      <p>Trace how four search algorithms navigate a weighted warehouse grid, then see how A* responds to a blocked aisle.</p>
+    </section>
+
+    <section id="workspace" aria-labelledby="workspace-title">
+      <div class="section-heading flex flex-wrap items-end justify-between gap-4">
+        <h2 id="workspace-title">Route simulator</h2>
+        <div class="segmented flex" role="group" aria-label="Experiment">
+          <button type="button" data-mode="search" aria-pressed="true">Compare routes</button>
+          <button type="button" data-mode="trolley" aria-pressed="false">Trolley replanning</button>
+        </div>
+      </div>
+      <div class="workspace-grid grid gap-5">
+        <figure class="panel map-card">
+          <figcaption class="map-heading flex flex-wrap items-center justify-between gap-3">
+            <div><span class="eyebrow map-kicker">SIMULATION GRID</span><h3>Warehouse floor plan</h3></div>
+            <span class="map-tag">8 ROWS × 12 COLUMNS</span>
+          </figcaption>
+          <div class="grid-frame">
+            <div class="col-labels" aria-hidden="true">{% for c in range(12) %}<span>{{ c }}</span>{% endfor %}</div>
+            <div class="row-labels" aria-hidden="true">{% for r in range(8) %}<span>{{ r }}</span>{% endfor %}</div>
+            <div id="floor" aria-label="8 by 12 warehouse grid. Packing is at row 2, column 1. Dispatch is at row 2, column 10." role="img">
+              {% for row in grid %}{% for cell in row %}
+              <div class="cell terrain-{{ {'#':'shelf', 'X':'restricted', '~':'crowd', 'S':'start', 'G':'goal', '.':'open'}[cell] }}"><span>{{ cell if cell in 'SG' else '4' if cell == '~' else '' }}</span></div>
+              {% endfor %}{% endfor %}
+              <div class="overlay" id="paths"></div>
+              <div class="robot" id="robot" hidden></div>
+            </div>
+          </div>
+          <ul class="legend flex flex-wrap gap-x-4 gap-y-2" aria-label="Grid legend">
+            <li><i class="key terrain-open"></i> Open · 1</li>
+            <li><i class="key terrain-crowd"></i> Crowded · 4</li>
+            <li><i class="key terrain-shelf"></i> Shelf</li>
+            <li><i class="key terrain-restricted"></i> Restricted</li>
+            <li><i class="key key-station">S</i> Packing</li>
+            <li><i class="key key-station">G</i> Dispatch</li>
+            <li><i class="key key-route"></i> <span id="route-key">Selected route</span></li>
+            <li id="visited-key"><i class="key key-visited"></i> Expanded</li>
+            <li id="original-key" hidden><i class="key key-original"></i> Original route</li>
+            <li id="traveled-key" hidden><i class="key key-route key-traveled"></i> Traveled before detection</li>
+            <li id="trolley-key" hidden><i class="key key-trolley"></i> Trolley</li>
+          </ul>
+        </figure>
+        <section class="panel controls" aria-labelledby="control-title">
+          <p class="eyebrow">EXPERIMENT CONTROLS</p>
+          <h3 id="control-title">Search algorithm</h3>
+          <div id="algorithms" class="segmented algo-options grid grid-cols-4" role="group" aria-label="Search algorithm">
+            {% for algorithm in data.algorithms %}
+            <button type="button" data-algorithm="{{ algorithm.id }}" aria-pressed="{{ 'true' if algorithm.id == 'astar' else 'false' }}">{{ algorithm.label }}</button>
+            {% endfor %}
+          </div>
+          <label id="scenario-label" for="scenario" hidden>Obstacle location</label>
+          <select id="scenario" hidden>
+            <option value="detour">Lower aisle · detour available</option>
+            <option value="blocked">Dispatch approach · no alternative</option>
+          </select>
+          <div class="selection">
+            <h4 id="selection-title">A* Search</h4>
+            <p id="selection-detail">Prioritizes total cost so far plus the Manhattan estimate.</p>
+          </div>
+          <dl class="metrics grid grid-cols-2 gap-2">
+            <div><dt>Moves</dt><dd id="moves">15</dd></div>
+            <div><dt>Travel cost</dt><dd id="cost">15</dd></div>
+            <div><dt>Nodes expanded</dt><dd id="expanded">—</dd></div>
+            <div><dt id="last-metric-label">Runtime</dt><dd id="last-metric">—</dd></div>
+          </dl>
+          <div class="playback">
+            <div class="flex items-center flex-wrap gap-2.5">
+              <button class="primary" id="play" type="button">Play</button>
+              <button class="secondary" id="step" type="button">Step</button>
+              <button class="secondary" id="reset" type="button">Reset</button>
+            </div>
+            <label class="sr-only" for="progress">Playback position</label>
+            <input type="range" id="progress" min="0" max="1" value="1">
+            <p class="playback-status" id="status" role="status"></p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="results" class="detail-section" aria-labelledby="results-title">
+      <div class="section-heading"><p class="eyebrow">ALGORITHM EVALUATION</p><h2 id="results-title">Performance comparison</h2></div>
+      <div class="panel results-panel">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Algorithm performance table">
+          <table>
+            <thead><tr><th scope="col">Algorithm</th><th scope="col">Goal reached</th><th scope="col">Moves</th><th scope="col">Path cost</th><th scope="col">Expanded</th><th scope="col">Time (ms)</th></tr></thead>
+            <tbody>
+            {% for a in data.algorithms %}
+              <tr{% if a.id == 'astar' %} class="best-row"{% endif %}><th scope="row">{{ a.name }}</th><td>{{ 'Yes' if a.reached else 'No' }}</td><td>{{ a.moves }}</td><td>{{ a.cost }}</td><td>{{ a.expanded }}</td><td>{{ '%.3f' | format(a.elapsed_ms) }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note"><strong>Fewer moves can cost more.</strong> BFS crosses five crowded cells in 9 moves for a cost of 24. A* takes 15 moves around them and lowers the cost to 15.</p>
+      </div>
+      <h3 class="subheading">Trolley experiments</h3>
+      <div class="panel results-panel">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Trolley performance table">
+          <table>
+            <thead><tr><th scope="col">Obstacle location</th><th scope="col">Goal reached</th><th scope="col">Moves</th><th scope="col">Travel cost</th><th scope="col">Expanded</th><th scope="col">Time (ms)</th><th scope="col">Replans</th></tr></thead>
+            <tbody>
+            {% for id, row in data.scenarios.items() %}
+              <tr><th scope="row">{{ 'Lower aisle' if id == 'detour' else 'Dispatch approach' }}</th><td>{{ 'Yes' if row.reached else 'No' }}</td><td>{{ row.moves }}</td><td>{{ row.cost }}</td><td>{{ row.expanded }}</td><td>{{ '%.3f' | format(row.elapsed_ms) }}</td><td>{{ row.replans }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">Trolley totals include travel up to the stop or delivery and search work from both A* calls. Timings are single-run measurements and vary by machine.</p>
+      </div>
+    </section>
+
+    <section id="method" class="detail-section method" aria-labelledby="method-title">
+      <div class="section-heading"><p class="eyebrow">SEARCH PROBLEM</p><h2 id="method-title">Model and methods</h2></div>
+      <div class="grid gap-4 md:grid-cols-3">
+        <article class="panel"><h3>State and actions</h3><p>The state is the robot’s row and column. It starts at packing and finishes at dispatch. Each move enters one adjacent cell. Shelves and restricted zones block entry.</p></article>
+        <article class="panel"><h3>Costs and heuristic</h3><p>Ordinary cells cost 1 and crowded cells cost 4. Manhattan distance is a lower bound because each move closes at most one unit of that distance and costs at least 1.</p></article>
+        <article class="panel"><h3>Obstacle discovery</h3><p>A* plans on the known map. When a trolley blocks the next cell, the robot stops, marks that cell as blocked, and reruns A* from its current position.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="shell">Warehouse Route Planning Lab <span>Artificial Intelligence · Group Coding Assignment</span></div></footer>
+  <script type="application/json" id="lab-data">{{ data | tojson }}</script>
+</body>
+</html>
+
