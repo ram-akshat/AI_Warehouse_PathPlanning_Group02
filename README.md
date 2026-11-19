@@ -75,12 +75,10 @@ An expanded node is a cell whose successors are examined. The goal and stale pri
 
 ## Group details
 
-| Member | Roll number | Contribution |
-| --- | --- | --- |
-| Sambodhi Bhowal | BT24CSD065 | To be added |
-| Sutikshan Upman | BT24CSD043 | To be added |
-| Akshat Pareek | BT24CSD041 | To be added |
-| Arpit Thorat | BT24CSD049 | To be added |
-| Ayush Kathal | BT24CSD064 | To be added |
-
-The group number and individual contribution descriptions are still to be added before submission.
+| Member | Roll number |
+| --- | --- |
+| Sambodhi Bhowal | BT24CSD065 |
+| Sutikshan Upman | BT24CSD043 |
+| Akshat Pareek | BT24CSD041 |
+| Arpit Thorat | BT24CSD049 |
+| Ayush Kathal | BT24CSD064 |
