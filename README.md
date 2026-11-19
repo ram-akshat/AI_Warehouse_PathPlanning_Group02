@@ -65,7 +65,13 @@ An expanded node is a cell whose successors are examined. The goal and stale pri
 
 ## Screenshots
 
-[Editable 10 by 16 map and trolley replanning](screenshots/custom-map-editor.png) · [Original route comparison](screenshots/route-comparison.png)
+- [Breadth-First Search route](screenshots/bfs-route.png)
+- [Depth-First Search route](screenshots/dfs-route.png)
+- [Greedy Best-First Search route](screenshots/greedy-route.png)
+- [A* route](screenshots/astar-route.png)
+- [Performance comparison and trolley results](screenshots/performance-comparison.png)
+- [Trolley detection and replanning demonstration](screenshots/trolley-replanning-demo.png)
+- [Editable warehouse map](screenshots/custom-map-editor.png)
 
 ## Group details
 
